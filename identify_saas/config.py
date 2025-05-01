@@ -1,1 +1,0 @@
-# Constants: keywords, thresholds, etc.

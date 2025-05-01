@@ -9,17 +9,10 @@ L'objectif est de centraliser les données et de suivre l'évolution des SaaS da
 
 Table des matières
 -------------------
-- Hypothèses
 - Fonctionnalités principales
 - Architecture
 - Installation
-- Utilisation
-- Exemples
-- Améliorations
-
-Hypothèses
----------------------------
-On suppose que l'on dispose de données de navigations d'utilisateurs d'une entreprise, contenant les user_ids, les urls visités, la date (et éventuellement la durée) de connexion.
+- Note Technique
 
 Fonctionnalités principales
 ---------------------------
@@ -50,56 +43,116 @@ Installation
 3. Configuration de l'API : Assurez-vous d'avoir les clés d'API pour accéder aux services externes comme Crunchbase.
 
 
-Améliorations
-------------
+# 📝 Note Technique
 
-## 1. Scoring
+## 1. 👤 Utilisateurs cibles
 
-### A) Keywords
-- Mots-clés SaaS présents dans le contenu des pages (login, pricing, free trial, etc.)
+**Cibles principales :**  
+- **DSI**
+- **Achats IT / Contrôle de gestion**
+- **RSSI / Compliance**
 
-### B) Pages à visiter
-- Page d’accueil
-- Pages “/login”, “/pricing”, “/signup”
+**Typologie d’entreprise :** ETI / Grands comptes
 
-### C) Autres scores
-- LinkedIn
-- Clearbit
-- BuiltWith
-- Twitter
+**Objectifs :**  
+- Monitorer les usages SaaS  
+- Contrôler les coûts  
+- Gérer les aspects de sécurité des données  
 
+**Cas d’usage :**  
+- Vue globale sur le parc SaaS de l’entreprise  
+- Alertes sur les nouveaux outils détectés  
+- Aide à la décision pour les achats IT  
 
-## 2. Données de test
+---
 
-- **URL_VISIT_DATA** : dataset représentatif sur 1 journée (URLs SaaS et non-SaaS)
+## 2. 🛠️ Présentation de l’outil
 
+L’outil exécute un **check programmé** (mensuel, hebdomadaire ou journalier) pour :
 
-## 3. KPIs
+### A. Détection automatique de nouveaux SaaS
+- Analyse des données de connexion utilisateurs
+- Récupération des **URLs racines**
+- Calcul de scores via des APIs (Wikipedia, Crunchbase, site web)
+- Fusion des scores pour déterminer si l’outil est un SaaS
+- Ajout automatique à la base si détection positive
+
+### B. Détection de changements (nom ou éditeur)
+
+**Hypothèses :**
+- Pas besoin de checks temps réel (heure/seconde), décision prise à l’échelle de plusieurs jours
+- Données d’entrée :  user_id, url, timestamp, duration
+- les données de SaaS sont contenues dans une dict {root_url : {name, aliases, website} }
+
+## 3. ⚙️ Fonctionnement détaillé
+
+### A. Calcul des scores de détection
+
+L’outil évalue plusieurs sources pour déterminer si une URL correspond à un SaaS :
+
+#### a) Score Wikipedia
+- Recherche d’une page Wikipédia liée à l’entreprise.
+- Indice de confiance basé sur la présence de mots-clés.
+
+#### b) Score Crunchbase
+- Vérification de l’existence de la société sur Crunchbase.
+- Analyse des tags.
+
+#### c) Website Score
+
+### Amélioration : chercher les pages “/login”, “/pricing”, “/signup”, et pas juste l’url root
+
+---
+
+## 4. 📈 KPIs à tracker
+
+Voici les indicateurs clés pour mesurer et améliorer la performance du système :
 
 - **Précision & Recall** de la détection  
-  - (ex : annotations manuelles via une case à cocher dans l’extension web)
-- **Scores utilisés**  
-  - Site Web, Crunchbase, Wikipedia
-- **Corrélation** des scores avec les détections correctes  
-  - Pour pondérer le score SaaS global
-- **Logs / erreurs**  
-  - Sites inaccessibles (ex : erreurs 403)
+  *(ex : annotations manuelles via une case à cocher dans l’extension web)*
 
-## 4. Front end
+- **Détail des scores utilisés**
+  - Scores par source : Website, Crunchbase, Wikipedia
 
-- **Liste des SaaS existants** et leurs métadonnées  
-  - Alias, noms précédents
-- **Données utilisateurs**  
-  - Dashboard nombre et temps de connexion mensuel
-- **KPIs** affichés en temps réel
+- **Corrélation des scores avec les détections correctes**
+  - Permet d’ajuster dynamiquement la pondération du score global
 
+- **Logs / erreurs**
+  - Par exemple : sites inaccessibles (403, 404)  -> typiquement pour le calcul du Website Score
 
-## 5. Améliorations de code
+---
 
-- Ajouter des **loggers** pour tracer les différentes étapes
-- Lire depuis le dossier `/data`  
-  - (`.csv` URL_VISIT_DATA, `.json` SaaS dict)
-- Écrire dans le dossier `/output`  
-  - (dict mis à jour)
-- Organiser les fonctions dans `identify_saas/`
-- ruff pour le formatage 
+## 5. 🧠 Cas limites & pistes d’amélioration
+
+### A. Fiabiliser le "SaaS Score"
+- Intégrer de **nouvelles sources d’informations** :
+  - LinkedIn, Clearbit, BuiltWith, Twitter
+- Adapter dynamiquement les pondérations des scores de manière dynamique
+
+### B. Intégration d’annotations manuelles
+(Permet un apprentissage semi-supervisé du modèle de détection)
+
+### C. Dashboard de visualisation
+- **Liste des SaaS détectés** + métadonnées (éditeur, catégories…)
+- **Données utilisateurs** :
+  - Nombre de connexions
+  - Durée moyenne par utilisateur / par SaaS
+- **KPIs de détection** pour suivi opérationnel
+
+### D. Architecture & structure technique
+
+- **Lecture des données d’entrée :**
+  - Dossier `/data`
+    - `.csv` : fichier `URL_VISIT_DATA`
+    - `.json` : dictionnaire SaaS existant
+
+- **Écriture des sorties :**
+  - Dossier `/output`
+    - Dictionnaire SaaS mis à jour avec scores et timestamps
+
+- **Logging :**
+  - Intégration de `loggers` pour suivre toutes les étapes du pipeline
+
+- **Traçabilité :**
+  - Ajout de **dates de dernière mise à jour** dans chaque entrée du dictionnaire SaaS
+
